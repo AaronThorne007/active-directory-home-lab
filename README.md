@@ -13,7 +13,7 @@ I built this to get hands-on with the tools I would actually be using in a Tier 
 
 Both VMs run on a VirtualBox Internal Network named `labnet`, which isolates the lab from my home network. The domain is `thornelab.local`.
 
-![VirtualBox adapter configured for the labnet internal network](screenshots/labnet-adapter-config.png)
+![VirtualBox adapter configured for the labnet internal network](labnet-adapter-config.png)
 
 ## What I Built
 
@@ -21,21 +21,21 @@ Both VMs run on a VirtualBox Internal Network named `labnet`, which isolates the
 
 **Directory structure.** Created two Organizational Units, `Employees` and `IT`, populated `Employees` with test user accounts, and created a `HelpDesk-Users` global security group with those users as members. I used OUs rather than the default Users container specifically because Group Policy Objects can only be linked to OUs, not to containers.
 
-![Active Directory Users and Computers showing the Employees OU with test users and the HelpDesk-Users security group](screenshots/aduc-employees-ou.png)
+![Active Directory Users and Computers showing the Employees OU with test users and the HelpDesk-Users security group](aduc-employees-ou.png)
 
 **Client machine.** Installed Windows 11, set a static IP on the same subnet, and pointed its DNS at the domain controller. Verified connectivity with `ping` and confirmed name resolution with `nslookup` before attempting the join, so that any failure would be a domain problem and not a network problem.
 
-![Successful ping to the domain controller at 0 percent loss and nslookup resolving thornelab.local](screenshots/network-verification.png)
+![Successful ping to the domain controller at 0 percent loss and nslookup resolving thornelab.local](network-verification.png)
 
 **Domain join.** Joined Client01 to `thornelab.local` using domain admin credentials. The computer object appeared automatically in the Computers container in Active Directory Users and Computers, and I confirmed the join by logging in as a domain user and checking `whoami`, which returned the domain account rather than a local one.
 
-![CLIENT01 computer object in the Computers container, created automatically by the domain join](screenshots/client01-computer-object.png)
+![CLIENT01 computer object in the Computers container, created automatically by the domain join](client01-computer-object.png)
 
 **Group Policy.** Created a GPO named `Desktop-Standard-Policy` and linked it to the `Employees` OU, then configured a User Configuration setting under Administrative Templates.
 
 **Verification.** Ran `gpupdate /force` on the client, logged out and back in, and confirmed the setting took effect. `gpresult /r` listed `Desktop-Standard-Policy` under Applied Group Policy Objects and showed the policy was pulled from `DC01.thornelab.local`. That output is the client reporting what it applied, which is stronger evidence than the change being visible on screen.
 
-![gpresult output showing Desktop-Standard-Policy applied to the domain user, pulled from DC01.thornelab.local](screenshots/gpresult.png)
+![gpresult output showing Desktop-Standard-Policy applied to the domain user, pulled from DC01.thornelab.local](gpresult.png)
 
 ## Problems I Hit and How I Fixed Them
 
@@ -43,7 +43,7 @@ These were the useful part of the build. Each one took some diagnosis.
 
 **Client could not reach the domain controller.**
 
-![Ping to the domain controller failing, with a destination host unreachable reply coming from the client's own IP address](screenshots/troubleshooting-arp-failure.png)
+![Ping to the domain controller failing, with a destination host unreachable reply coming from the client's own IP address](troubleshooting-arp-failure.png)
 
 Pings to the DC timed out, and one reply came back as "Destination host unreachable" from the client's own IP. That specific message means the client sent an ARP request for the DC and got no answer, so nothing on that network segment was responding at that address. That pointed at a layer 2 problem rather than DNS or a firewall. The cause turned out to be that the client's network adapter setting had never saved to Internal Network, so the two VMs were on completely different networks despite the configuration appearing correct. Reapplying the setting with the VM fully powered off fixed it, and ping came back clean at 0 percent loss.
 
